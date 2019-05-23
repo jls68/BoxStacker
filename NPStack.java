@@ -2,7 +2,7 @@ import java.list;
 
 // 1314151 James Sheaf-Morrison
 
-public class Main {
+public class NPStack {
 
     public static void main(String[] args) {
         // Declare list to hold all the available boxes in

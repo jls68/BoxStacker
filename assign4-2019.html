@@ -1,0 +1,91 @@
+<html>
+<head>
+<style>
+
+body { font-family: serif; font-size: 10pt}
+h2 { font-size: 24px; 
+font-style: italic;
+}
+
+
+</style>
+</head>
+
+<body>
+<h2> COMPX301-19A &mdash; Assignment Four </h2>
+
+<h3> Heuristic algorithm to stack boxes</h3>
+
+<b> Due:</b> Saturday, June 8th, 2019 &mdash; 11.30pm 
+<br>
+ 
+<p>
+<b>Description:</b>
+Implement either a simulated annealing or genetic algorithm solution
+to find the tallest stack possible for a given set of boxes (according
+to the specification given below).  This assignment may be done in
+pairs or individually.  The solution must be written in Java to run on
+a Linux machine like those in the R Block labs.
+
+</p> <p>
+<b>Specification:</b>
+<ul>
+ <li> The dimensions of a box are specified with three
+ integers&mdash;defining its height, width and depth (in no particular order)
+ <li> A set of boxes is defined within a text file, where each
+ line has three space-separated integers giving the dimensions of one
+ box. (Several sample data files are supplied.)
+ <li> A box can be oriented such that any one side is its
+ bottom face. Thus, a box has at most three distinct orientations.
+ <li> Boxes are placed one-on-top-of-another to make a stack.
+ <li> <b>Touching faces condition:</b> one box may be placed on top of
+ another provided its bottom face is strictly smaller than the top
+ face of the box upon which it rests.  That is, its bottom face must
+ fit entirely within the area of the top-face of the box underneath,
+ without over-hang or flush-sides (i.e. shorter in both dimensions).
+ <li> <b>Single use condition:</b> Each box can be used <i>at most once</i>
+ in the final stack, in any orientation that allows it to satisfy
+ the "touching faces condition".
+ <li> Your program must find the tallest stack possible for a given
+ set of boxes without violating the "touching faces" or "single use"
+ conditions (n.b. this may mean that you cannot use all the boxes).
+ <li> The output of your program is a list of the boxes forming the
+ tallest stack you can find that satisfies the conditions above. Each
+ line of output specifies the dimensions of one box in the stack using
+ three integers (separated by spaces), where the first integer is the
+ width of the box, the second is its length and the third is its
+ height, and these are followed by a fourth integer that states the
+ total height of the stack at the point where this box is top-most.
+ The lines of output should be in order from the bottom-most box to
+ the top-most (i.e. last line of output is the top box), thus the
+ fourth integer on each line is just the sum of the third integers for
+ all lines up to and including the current box (i.e. the height of the
+ stack up to this point), and the last number output by your program
+ is the total height of the entire stack.
+ <li> Your program must run from the command-line (i.e. as a console
+ program) and take two arguments: the first is the name of a text file
+ presumed to define a set of boxes as outlined above; and the second
+ is an integer specifying the maximum number of candidate solutions
+ that can be evaluated before your program must stop and produce the
+ best solution it has found. Some test files will be available on
+ Moodle, but students are encouraged to create their own additional
+ test data.
+ <li> Each line of input should be checked to ensure all box
+ dimensions are positive integers. Any line of input with an error
+ should just be ignored.
+ <li> Your program class must be called NPStack.java
+</ul>
+
+<b> Hand in:</b>  Submission is via moodle. Submit only source code
+and a plain-text README file that briefly describes your
+approach/algorithm (and anything else you want your marker to know
+about).  Make sure to include in all source code files the name and ID
+number of those submitting this solution.  Marks are awarded based upon 
+program performance, the quality of the source code and its
+documentation.
+</p>
+<font size=-1>Tony C. Smith, 20/05/2019</font>
+</p>
+</body>
+</html>
+

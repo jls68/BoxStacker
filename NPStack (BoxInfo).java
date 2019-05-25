@@ -8,39 +8,50 @@ import java.io.BufferedReader;
 // 1314151 James Sheaf-Morrison
 
 public class NPStack {
+    // Declare list to hold all the available boxes in
+    private static LinkedList<Box> readBoxes = new LinkedList<Box>();
 
-    private static boolean canFit(LinkedList<Box> stackedBoxes, int bottomIndex, Box x) {
+    private static boolean canFit(LinkedList<BoxInfo> stkBxInfo, int bottomIndex, Box x) {
         int boxHeight;
-        Face toFit = stackedBoxes.get(bottomIndex).getBottomFace();
+        BoxInfo currentBox = stkBxInfo.get(bottomIndex);
+        Box boxToFit = readBoxes.get(currentBox.Id());
+        Face toFit = boxToFit.getFace(currentBox.ori);
+        BoxInfo newBox = new BoxInfo(x.getID(), 0);
         LinkedList<Integer> fittingFaces = x.facesThatCanHold(toFit);
+        // Look at next box down in stack
+        bottomIndex++;
         // If stacked boxes can go on top of next box but that stack needs to be split
-        if (0 < fittingFaces.size() && bottomIndex + 1 < stackedBoxes.size()) {
+        if (0 < fittingFaces.size() && bottomIndex < stkBxInfo.size()) {
             // Remove any faces that can't fit on top of the bottem slice of the stack
-            toFit = stackedBoxes.get(bottomIndex + 1).getBottomFace();
+            currentBox = stkBxInfo.get(bottomIndex);
+            boxToFit = readBoxes.get(currentBox.Id());
+            toFit = boxToFit.getFace(currentBox.ori);
             fittingFaces = x.whichCanFitInside(toFit, fittingFaces);
         }
         // If there are faces that can fit then add the best one
         if (0 < fittingFaces.size()) {
             boxHeight = 0;
             // Find ideal orientation
-            for (int orientation : fittingFaces) {
+            for (int orientation = 1; orientation < fittingFaces.size(); orientation++) {
                 // If this orientation offers a better height
                 if (boxHeight < x.getHeight(orientation)) {
                     // Set boxHeight to current possible height
                     boxHeight = x.getHeight(orientation);
                     // Set orientation of the new box
-                    x.setOrientation(orientation);
+                    newBox.ori = orientation;
                 }
             }
-            stackedBoxes.add(bottomIndex + 1, x);
+            stkBxInfo.add(bottomIndex, newBox);
             return true;
         }
-        // Look at next box up in stack
-        bottomIndex--;
-        // If there are no more boxes
+        bottomIndex-=2;
+        // If there are no more boxes on top
         if (bottomIndex < 0) {
             // Check if the new box can go on top
-            fittingFaces = x.whichCanFitInside(stackedBoxes.get(0).getBottomFace(), x.getAllFaceIndex());
+            currentBox = stkBxInfo.get(0);
+            boxToFit = readBoxes.get(currentBox.Id());
+            toFit = boxToFit.getFace(currentBox.ori);
+            fittingFaces = x.whichCanFitInside(toFit, x.getAllFaceIndex());
             if (0 < fittingFaces.size()) {
                 boxHeight = 0;
                 for (int orientation : fittingFaces) {
@@ -49,44 +60,45 @@ public class NPStack {
                         // Set boxHeight to current possible height
                         boxHeight = x.getHeight(orientation);
                         // Set orientation of the new box
-                        x.setOrientation(orientation);
+                        newBox.ori = orientation;
                     }
                 }
-                stackedBoxes.addFirst(x);
+                stkBxInfo.addFirst(newBox);
                 return true;
             }
         }
         // Check if box can be inserted higher into stack
-        else if (canFit(stackedBoxes, bottomIndex, x)) {
+        else if (canFit(stkBxInfo, bottomIndex, x)) {
             return true;
         }
         return false;
     }
 
-    private static void printStack(LinkedList<Box> stackedBoxes, String breaker) {
+    private static void printStack(LinkedList<BoxInfo> stackedBoxes, String breaker) {
         int w, h;
         // Variables to use to rotate any blocks to fit
-        //int prevW = 0, prevH = 0, t;
+        // int prevW = 0, prevH = 0, t;
+        Face f;
+        Box b;
 
         // Display each box in stack
-        for (Box b : stackedBoxes) {
-            w = b.getBottomFace().Width();
-            h = b.getBottomFace().Height();
-            /*// Rotate boxes to fit if needed
-            if (w < prevW || h < prevH) {
-                t = w;
-                w = h;
-                h = t;
-            }*/
+        for (BoxInfo x : stackedBoxes) {
+            b = readBoxes.get(x.Id());
+            f = b.getFace(x.ori);
+            w = f.Width();
+            h = f.Height();
+            /*
+             * // Rotate boxes to fit if needed if (w < prevW || h < prevH) { t = w; w = h;
+             * h = t; }
+             */
             // Rotate box so smallest of width or height is first
             if (w > h) {
-                System.out.print(h + " " + w + " " + b.getCurrentHeight() + breaker);
+                System.out.print(h + " " + w + " " + b.getHeight(x.ori) + breaker);
+            } else {
+                System.out.print(w + " " + h + " " + b.getHeight(x.ori) + breaker);
             }
-            else{
-                System.out.print(w + " " + h + " " + b.getCurrentHeight() + breaker);
-            }
-            //prevW = w;
-            //prevH = h;
+            // prevW = w;
+            // prevH = h;
         }
         if (breaker != "\n") {
             System.out.println();
@@ -94,7 +106,7 @@ public class NPStack {
     }
 
     // Print stack method that also displays all boxes that could not be stacked
-    private static void printStack(LinkedList<Box> stackedBoxes, LinkedList<Box> failedBoxes, String breaker) {
+    private static void printStack(LinkedList<BoxInfo> stackedBoxes, LinkedList<Box> failedBoxes, String breaker) {
         printStack(stackedBoxes, breaker);
         // Display any boxes that failed to stack
         if (!failedBoxes.isEmpty()) {
@@ -109,10 +121,12 @@ public class NPStack {
         }
     }
 
-    private static int totalHeight(LinkedList<Box> stack) {
+    private static int totalHeight(LinkedList<BoxInfo> stack) {
         int sum = 0;
-        for (Box b : stack) {
-            sum += b.getCurrentHeight();
+        Box b;
+        for (BoxInfo x : stack) {
+            b = readBoxes.get(x.Id());
+            sum += b.getHeight(x.ori);
         }
         return sum;
     }
@@ -129,20 +143,18 @@ public class NPStack {
             final int GENERATION = 4;
 
             // Declare list to hold all the available boxes in
-            LinkedList<Box> readBoxes = new LinkedList<Box>();
-            // Declare list to hold all the available boxes in
-            LinkedList<Box> availBoxes = new LinkedList<Box>();
+            LinkedList<Integer> availBoxes = new LinkedList<Integer>();
             // Declare list to hold all the boxes in the stack
-            LinkedList<Box> stackedBoxes = new LinkedList<Box>();
+            LinkedList<BoxInfo> stackedBoxes = new LinkedList<BoxInfo>();
             // Declare list to hold all the boxes that can't fit onto stack
             LinkedList<Box> failedBoxes = new LinkedList<Box>();
             // Declare list to hold the generation's best stack
-            LinkedList<Box> currentBestStack = new LinkedList<Box>();
+            LinkedList<BoxInfo> currentBestStack = new LinkedList<BoxInfo>();
             // Declare list to hold the overall best stack
-            LinkedList<Box> finalStack = new LinkedList<Box>();
+            LinkedList<BoxInfo> finalStack = new LinkedList<BoxInfo>();
 
             // Array of linked lists to hold each attempt
-            LinkedList<LinkedList<Box>> gen;
+            LinkedList<LinkedList<BoxInfo>> gen;
 
             Random r = new Random();
 
@@ -150,7 +162,6 @@ public class NPStack {
             int bottomIndex;
             // t is a temporary int value that is used in place of many local ints
             int bestHeight, t = 0;
-            Box x;
             boolean roomForImprovement = true;
 
             // Declare variables to use while reading from file
@@ -178,24 +189,27 @@ public class NPStack {
 
                 while (roomForImprovement) {
                     System.out.println("New Generation of attempts:");
-                    gen = new LinkedList<LinkedList<Box>>();
+                    gen = new LinkedList<LinkedList<BoxInfo>>();
                     // For each attempt in generation stack boxes with a different order of boxes in
                     // the available list
                     for (int g = 0; g < GENERATION; g++) {
+                        t = 0;
                         // Add all boxes to available list
-                        availBoxes.addAll(readBoxes);
+                        for (t = 0; t < readBoxes.size(); t++){
+                            availBoxes.add(t);
+                        }
                         // Grab random boxes from those available
                         for (int i = 0; i < readBoxes.size(); i++) {
                             // Take a random box from available
                             t = r.nextInt(availBoxes.size());
-                            x = availBoxes.remove(t);
+                            t = availBoxes.remove(t);
                             // Calculate which boxes can be add to stack
                             if (stackedBoxes.isEmpty()) {
-                                stackedBoxes.add(x);
+                                stackedBoxes.add(new BoxInfo(t, 0));
                             } else {
                                 bottomIndex = stackedBoxes.size() - 1;
-                                if (false == canFit(stackedBoxes, bottomIndex, x)) {
-                                    failedBoxes.add(x);
+                                if (false == canFit(stackedBoxes, bottomIndex, readBoxes.get(t))) {
+                                    failedBoxes.add(readBoxes.get(t));
                                 }
                             }
                         }
@@ -207,13 +221,13 @@ public class NPStack {
                         // Save attempt results
                         gen.add(stackedBoxes);
                         // Reset the stackedBoxes
-                        stackedBoxes = new LinkedList<Box>();
+                        stackedBoxes = new LinkedList<BoxInfo>();
                     }
 
                     // Use h to store the best total height of this generation's stacks
                     bestHeight = 0;
                     System.out.println("This generation's attempts' total heights");
-                    for (LinkedList<Box> stack : gen) {
+                    for (LinkedList<BoxInfo> stack : gen) {
                         t = totalHeight(stack);
                         System.out.print(t + ", ");
                         // Check if this is a better stack height than previous best
@@ -224,8 +238,10 @@ public class NPStack {
                     }
                     System.out.println();
 
-                    // If this is the first generation or there is an improvement over the last generation's best stack
-                    if (finalStack.isEmpty() || totalHeight(finalStack) < bestHeight){
+                    // If this is the first generation or there is an improvement over the last
+                    // generation's best stack
+                    if (finalStack.isEmpty() || totalHeight(finalStack) < bestHeight) {
+                        int fog = totalHeight(finalStack);
                         finalStack = currentBestStack;
                     }
                     // Else there is no more room for improvement
@@ -252,7 +268,6 @@ public class NPStack {
     private static class Box {
         // Using a list of points as it offers an X and a Y value which is all we need
         private Face[] uniqueFaces;
-        private int orientation = 0;
         private int id;
 
         public Box(int width, int height, int depth, int id) {
@@ -302,18 +317,6 @@ public class NPStack {
             return id;
         }
 
-        public int ori(){
-            return orientation;
-        }
-
-        public Face getBottomFace() {
-            return getFace(orientation);
-        }
-
-        public void setOrientation(int bottomFaceIndex) {
-            orientation = bottomFaceIndex;
-        }
-
         public Face getFace(int index) {
             // If specified face is within index
             if (index < uniqueFaces.length && index >= 0) {
@@ -353,10 +356,6 @@ public class NPStack {
                 // By default return first face's height
                 return uniqueFaces[0].Height();
             }
-        }
-
-        public int getCurrentHeight() {
-            return getHeight(orientation);
         }
 
         // Return all faces that the face to compare can fit inside
@@ -415,6 +414,20 @@ public class NPStack {
              * else if (width < compare.Height() && height < compare.Width()){ int temp =
              * width; width = height; height = temp; return true; } return false;
              */
+        }
+    }
+
+    private static class BoxInfo {
+        private int id;
+        public int ori;
+
+        public BoxInfo(int id, int orientation) {
+            this.id = id;
+            ori = orientation;
+        }
+
+        public int Id() {
+            return id;
         }
     }
 }

@@ -64,26 +64,19 @@ public class NPStack {
     }
 
     private static void printStack(LinkedList<Box> stackedBoxes, String breaker) {
-        int w, h;
         // Variables to use to rotate any blocks to fit
-        // int prevW = 0, prevH = 0, t;
+        int w, h;
 
         // Display each box in stack
         for (Box b : stackedBoxes) {
             w = b.getBottomFace().Width();
             h = b.getBottomFace().Height();
-            /*
-             * // Rotate boxes to fit if needed if (w < prevW || h < prevH) { t = w; w = h;
-             * h = t; }
-             */
             // Rotate box so smallest of width or height is first
             if (w > h) {
                 System.out.print(h + " " + w + " " + b.getCurrentHeight() + breaker);
             } else {
                 System.out.print(w + " " + h + " " + b.getCurrentHeight() + breaker);
             }
-            // prevW = w;
-            // prevH = h;
         }
         if (breaker != "\n") {
             System.out.println();
@@ -134,10 +127,12 @@ public class NPStack {
 
             // Declare variables to use with stacking boxes
             // t is a temporary int value that is used in place of many local ints
-            int bottomIndex, bestStackSize = 1, sum, t = 0;
+            int bottomIndex, sum, p1, p2, totalSum, bestStackSize = 0, t = 0;
             int toRecall = GENERATIONS + 1;
-            Box x;
+            Box x, x2;
             boolean roomForImprovement = true;
+            // Hold the height of each stack to get the chance of it being a parent
+            int[] parentChance = new int[GENERATIONS];
 
             // Declare variables to use while reading from file
             String textLine = "(No line read)";
@@ -169,6 +164,7 @@ public class NPStack {
                 while (roomForImprovement) {
                     // Stop after this generation unless stated otherwise
                     roomForImprovement = false;
+                    totalSum = 0;
 
                     System.out.println("New Generation of attempts:\n");
                     // For each attempt in generation stack boxes with a different order of boxes in
@@ -176,18 +172,82 @@ public class NPStack {
                     for (int g = 0; g < GENERATIONS; g++) {
                         // Add all boxes to available list
                         availBoxes.addAll(readBoxes);
-                        // Grab random boxes from those available
-                        for (int i = 0; i < readBoxes.size(); i++) {
-                            // Take a random box from available
-                            t = r.nextInt(availBoxes.size());
-                            x = availBoxes.remove(t);
-                            // Calculate which boxes can be add to stack
-                            if (stackedBoxes.isEmpty()) {
-                                stackedBoxes.add(x);
-                            } else {
-                                bottomIndex = stackedBoxes.size() - 1;
-                                if (false == canFit(stackedBoxes, bottomIndex, x)) {
-                                    failedBoxes.add(x);
+
+                        // If parentChance is 0 or is the first generation
+                        if (parentChance[g] == 0 || g == 0){
+                            // Grab random boxes from those available
+                            for (int i = 0; i < readBoxes.size(); i++) {
+                                // Take a random box from available
+                                t = r.nextInt(availBoxes.size());
+                                x = availBoxes.remove(t);
+                                // Calculate which boxes can be add to stack
+                                if (stackedBoxes.isEmpty()) {
+                                    stackedBoxes.add(x);
+                                } else {
+                                    bottomIndex = stackedBoxes.size() - 1;
+                                    if (false == canFit(stackedBoxes, bottomIndex, x)) {
+                                        failedBoxes.add(x);
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            // Pick first parent
+                            p1 = r.nextInt(totalSum);
+                            for (int i = 0; i < GENERATIONS; i++) {
+                                // If not this town
+                                if (p1 > parentChance[i]) {
+                                    // Reduce p1
+                                    p1 -= parentChance[i];
+                                }
+                                // Else this town is the parent
+                                else
+                                {
+                                    p1 = i;
+                                    break;
+                                }
+                            }
+                            p2 = r.nextInt(totalSum - parentChance[p1]);
+                            for (int i = 0; i < GENERATIONS; i++) {
+                                // If same as first parent then skip
+                                if (i != p1)
+                                {
+                                    // If not this satck
+                                    if (p2 > parentChance[i])
+                                    {
+                                        // Reduce p2
+                                        p2 -= parentChance[i];
+                                    }
+                                    // Else this stack is the parent
+                                    else
+                                    {
+                                        p2 = i;
+                                        break;
+                                    }
+                                }
+                            }
+                            System.out.println("Parents are " + p1 + " & " + p2);
+
+                            for (int i = 0; i < readBoxes.size(); i++) {
+                                // Get box from first parent
+                                x = readBoxes.get(stacks[p1][i][0]);
+                                // Get box from second parent
+                                x2 = readBoxes.get(stacks[p2][i][0]);
+                                // Merge the two parents
+                                for (Box b : availBoxes) {
+                                    if(b == x || b == x2){
+                                        availBoxes.remove(b);
+                                        // Calculate if the box can be add to stack
+                                        if (stackedBoxes.isEmpty()) {
+                                            stackedBoxes.add(b);
+                                        } else {
+                                            bottomIndex = stackedBoxes.size() - 1;
+                                            if (false == canFit(stackedBoxes, bottomIndex, b)) {
+                                                failedBoxes.add(b);
+                                            }
+                                        }
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -206,6 +266,8 @@ public class NPStack {
                             stacks[g][b][1] = x.getOri();
                             stacks[g][b][2] = sum;
                         }
+                        parentChance[g] = sum;
+                        totalSum += sum;
                         System.out.print(sum + "\n\n");
 
                         // We will use the current size of the stack often so save it in a temp variable for easy access

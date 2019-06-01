@@ -66,27 +66,24 @@ public class NPStack {
     private static void printStack(LinkedList<Box> stackedBoxes, String breaker) {
         int w, h;
         // Variables to use to rotate any blocks to fit
-        //int prevW = 0, prevH = 0, t;
+        // int prevW = 0, prevH = 0, t;
 
         // Display each box in stack
         for (Box b : stackedBoxes) {
             w = b.getBottomFace().Width();
             h = b.getBottomFace().Height();
-            /*// Rotate boxes to fit if needed
-            if (w < prevW || h < prevH) {
-                t = w;
-                w = h;
-                h = t;
-            }*/
+            /*
+             * // Rotate boxes to fit if needed if (w < prevW || h < prevH) { t = w; w = h;
+             * h = t; }
+             */
             // Rotate box so smallest of width or height is first
             if (w > h) {
                 System.out.print(h + " " + w + " " + b.getCurrentHeight() + breaker);
-            }
-            else{
+            } else {
                 System.out.print(w + " " + h + " " + b.getCurrentHeight() + breaker);
             }
-            //prevW = w;
-            //prevH = h;
+            // prevW = w;
+            // prevH = h;
         }
         if (breaker != "\n") {
             System.out.println();
@@ -109,14 +106,6 @@ public class NPStack {
         }
     }
 
-    private static int totalHeight(LinkedList<Box> stack) {
-        int sum = 0;
-        for (Box b : stack) {
-            sum += b.getCurrentHeight();
-        }
-        return sum;
-    }
-
     public static void main(String[] args) {
         // To help with testing fill in an empty args
         if (args.length == 0) {
@@ -126,7 +115,7 @@ public class NPStack {
 
         if (args.length > 0) {
             // Numebr of attempts per generation
-            final int GENERATION = 4;
+            final int GENERATIONS = 4;
 
             // Declare list to hold all the available boxes in
             LinkedList<Box> readBoxes = new LinkedList<Box>();
@@ -136,20 +125,17 @@ public class NPStack {
             LinkedList<Box> stackedBoxes = new LinkedList<Box>();
             // Declare list to hold all the boxes that can't fit onto stack
             LinkedList<Box> failedBoxes = new LinkedList<Box>();
-            // Declare list to hold the generation's best stack
-            LinkedList<Box> currentBestStack = new LinkedList<Box>();
-            // Declare list to hold the overall best stack
-            LinkedList<Box> finalStack = new LinkedList<Box>();
 
-            // Array of linked lists to hold each attempt
-            LinkedList<LinkedList<Box>> gen;
+            // Array of two ints to hold each attempt; first is the generation, second is the order of the box in the stack, 
+            // and the third determines if holding id, orientation of box, and the height of this box plus those above it
+            int[][][] stacks;
 
             Random r = new Random();
 
             // Declare variables to use with stacking boxes
-            int bottomIndex;
             // t is a temporary int value that is used in place of many local ints
-            int bestHeight, t = 0;
+            int bottomIndex, bestStackSize = 1, sum, t = 0;
+            int toRecall = GENERATIONS + 1;
             Box x;
             boolean roomForImprovement = true;
 
@@ -173,15 +159,21 @@ public class NPStack {
                 }
                 textFile.close();
 
+                // The toRecall value refers to the amount of attempts per generation plus the best overall stack
+                // The 3 refers to the three integers to remember for each box; id, orientation, and local height
+                stacks = new int[toRecall][readBoxes.size()][3];
+
                 System.out.println(
                         "Stacked boxes are displayed from top of stack at the start of the list to the bottom box at the end of list.");
 
                 while (roomForImprovement) {
-                    System.out.println("New Generation of attempts:");
-                    gen = new LinkedList<LinkedList<Box>>();
+                    // Stop after this generation unless stated otherwise
+                    roomForImprovement = false;
+
+                    System.out.println("New Generation of attempts:\n");
                     // For each attempt in generation stack boxes with a different order of boxes in
                     // the available list
-                    for (int g = 0; g < GENERATION; g++) {
+                    for (int g = 0; g < GENERATIONS; g++) {
                         // Add all boxes to available list
                         availBoxes.addAll(readBoxes);
                         // Grab random boxes from those available
@@ -200,42 +192,53 @@ public class NPStack {
                             }
                         }
 
-                        System.out.println("Attempt " + (g + 1));
+                        System.out.print("Attempt " + (g + 1) +": ");
 
                         printStack(stackedBoxes, ", ");
-
-                        // Save attempt results
-                        gen.add(stackedBoxes);
-                        // Reset the stackedBoxes
-                        stackedBoxes = new LinkedList<Box>();
-                    }
-
-                    // Use h to store the best total height of this generation's stacks
-                    bestHeight = 0;
-                    System.out.println("This generation's attempts' total heights");
-                    for (LinkedList<Box> stack : gen) {
-                        t = totalHeight(stack);
-                        System.out.print(t + ", ");
-                        // Check if this is a better stack height than previous best
-                        if (bestHeight < t) {
-                            bestHeight = t;
-                            currentBestStack = stack;
+                        
+                        System.out.print("This attempt's total height is ");
+                        sum = 0;
+                        for (int b = 0; b < stackedBoxes.size(); b++) {
+                            x =  stackedBoxes.get(b);
+                            sum += x.getCurrentHeight();
+                            // Save information
+                            stacks[g][b][0] = x.getID();
+                            stacks[g][b][1] = x.getOri();
+                            stacks[g][b][2] = sum;
                         }
-                    }
-                    System.out.println();
+                        System.out.print(sum + "\n\n");
 
-                    // If this is the first generation or there is an improvement over the last generation's best stack
-                    if (finalStack.isEmpty() || totalHeight(finalStack) < bestHeight){
-                        finalStack = currentBestStack;
-                    }
-                    // Else there is no more room for improvement
-                    else {
-                        roomForImprovement = false;
+                        // We will use the current size of the stack often so save it in a temp variable for easy access
+                        t = stackedBoxes.size();
+
+                        if (stacks[g][t-1][2] != sum){
+                            System.out.println("Error with setting the sum height of current stack");
+                        }
+
+                        // If this is the tallest stack save it
+                        if (stacks[GENERATIONS][bestStackSize-1][2] < sum){
+                            for(int i = 0; i < bestStackSize || i < t; i++){
+                                stacks[GENERATIONS][i][0] = stacks[g][i][0];
+                                stacks[GENERATIONS][i][1] = stacks[g][i][1];
+                                stacks[GENERATIONS][i][2] = stacks[g][i][2];
+                            }
+                            // Set new size of best stack
+                            bestStackSize = t;
+                            // There has been improvement so keep going
+                            roomForImprovement = true;
+                        }
+                        // Reset the stackedBoxes
+                        stackedBoxes.clear();
                     }
                 } // End while for repeating creating generations
 
-                System.out.println("Best stack at height " + totalHeight(finalStack) + " is:");
-                printStack(finalStack, "\n");
+                System.out.println("Best stack at height " + stacks[GENERATIONS][bestStackSize-1][2] + " is:");
+                for(int i = 0; i < bestStackSize; i++){
+                    x = readBoxes.get(stacks[GENERATIONS][i][0]);
+                    x.setOrientation(stacks[GENERATIONS][i][1]);
+                    stackedBoxes.add(x);
+                }
+                printStack(stackedBoxes, "\n");
 
             } catch (NumberFormatException ex) {
                 System.out.println("A dimension for the box on the line : " + textLine
@@ -302,7 +305,7 @@ public class NPStack {
             return id;
         }
 
-        public int ori(){
+        public int getOri() {
             return orientation;
         }
 

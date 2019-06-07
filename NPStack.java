@@ -2,20 +2,19 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.Collections;
 import java.io.FileReader;
-import java.awt.font.NumericShaper.Range;
 import java.io.BufferedReader;
 
-class NPStack{
+class NPStack {
 
-    private static boolean canFit(LinkedList<Box> stackedBoxes, int bottomIndex, Box x) {
+    private static boolean canFit(LinkedList<Box> stackedBoxes, int bottomIndex, Box x1) {
         int boxHeight;
         Face toFit = stackedBoxes.get(bottomIndex).getBottomFace();
-        LinkedList<Integer> fittingFaces = x.facesThatCanHold(toFit);
+        LinkedList<Integer> fittingFaces = x1.facesThatCanHold(toFit);
         // If stacked boxes can go on top of next box but that stack needs to be split
         if (0 < fittingFaces.size() && bottomIndex + 1 < stackedBoxes.size()) {
             // Remove any faces that can't fit on top of the bottem slice of the stack
             toFit = stackedBoxes.get(bottomIndex + 1).getBottomFace();
-            fittingFaces = x.whichCanFitInside(toFit, fittingFaces);
+            fittingFaces = x1.whichCanFitInside(toFit, fittingFaces);
         }
         // If there are faces that can fit then add the best one
         if (0 < fittingFaces.size()) {
@@ -23,14 +22,14 @@ class NPStack{
             // Find ideal orientation
             for (int orientation : fittingFaces) {
                 // If this orientation offers a better height
-                if (boxHeight < x.getHeight(orientation)) {
+                if (boxHeight < x1.getHeight(orientation)) {
                     // Set boxHeight to current possible height
-                    boxHeight = x.getHeight(orientation);
+                    boxHeight = x1.getHeight(orientation);
                     // Set orientation of the new box
-                    x.setOrientation(orientation);
+                    x1.setOrientation(orientation);
                 }
             }
-            stackedBoxes.add(bottomIndex + 1, x);
+            stackedBoxes.add(bottomIndex + 1, x1);
             return true;
         }
         // Look at next box up in stack
@@ -38,24 +37,24 @@ class NPStack{
         // If there are no more boxes
         if (bottomIndex < 0) {
             // Check if the new box can go on top
-            fittingFaces = x.whichCanFitInside(stackedBoxes.get(0).getBottomFace(), x.getAllFaceIndex());
+            fittingFaces = x1.whichCanFitInside(stackedBoxes.get(0).getBottomFace(), x1.getAllFaceIndex());
             if (0 < fittingFaces.size()) {
                 boxHeight = 0;
                 for (int orientation : fittingFaces) {
                     // If this orientation offers a better height
-                    if (boxHeight < x.getHeight(orientation)) {
+                    if (boxHeight < x1.getHeight(orientation)) {
                         // Set boxHeight to current possible height
-                        boxHeight = x.getHeight(orientation);
+                        boxHeight = x1.getHeight(orientation);
                         // Set orientation of the new box
-                        x.setOrientation(orientation);
+                        x1.setOrientation(orientation);
                     }
                 }
-                stackedBoxes.addFirst(x);
+                stackedBoxes.addFirst(x1);
                 return true;
             }
         }
         // Check if box can be inserted higher into stack
-        else if (canFit(stackedBoxes, bottomIndex, x)) {
+        else if (canFit(stackedBoxes, bottomIndex, x1)) {
             return true;
         }
         return false;
@@ -86,7 +85,7 @@ class NPStack{
         printStack(stackedBoxes, breaker);
         // Display any boxes that failed to stack
         if (!failedBoxes.isEmpty()) {
-            System.out.println("These boxes did not make it onto the stack:");
+            System.out.print("These boxes did not make it onto the stack: ");
             // Display each box not in stack
             for (Box b : failedBoxes) {
                 System.out.print(b.getFace(0).Width() + " " + b.getFace(0).Height() + " " + b.getHeight(0) + breaker);
@@ -99,14 +98,14 @@ class NPStack{
 
     public static void main(String[] args) {
         // To help with testing fill in an empty args
-        if (args.length == 0) {
+        /*if (args.length == 0) {
             args = new String[1];
-            args[0] = ("/home/james/Documents/Compx301/COMPX301_A4/rand0020.boxes");
-        }
+            args[0] = ("rand0020.boxes");
+        }*/
 
         if (args.length > 0) {
             // Numebr of attempts per generation
-            final int GENERATIONS = 8;
+            final int GENERATIONS = 4;
             // Numebr of extra generations to attempt with no improvment
             final int REPEATS = 3;
 
@@ -127,9 +126,9 @@ class NPStack{
 
             // Declare variables to use with stacking boxes
             // t is a temporary int value that is used in place of many local ints
-            int bottomIndex, p1, p2, sum, bestStackSize = 1, t = 0, repeats = 0;;
+            int bottomIndex, p1, p2, sum, x, y, z, bestStackSize = 1, t = 0, repeats = 0;;
             int toRecall = GENERATIONS + 1;
-            Box x, x2;
+            Box x1, x2;
             boolean roomForImprovement = true;
             // Hold the height of each stack to get the chance of it being a parent
             int[] parentChance = new int[GENERATIONS];
@@ -141,16 +140,30 @@ class NPStack{
                 BufferedReader textFile = new BufferedReader(new FileReader(args[0]));
                 // Read in the boxes from file
                 while (null != (textLine = textFile.readLine())) {
-                    dimen = textLine.split(" ");
-                    if (dimen.length > 3) {
-                        System.out.println(
-                                "Less than 3 dimensions given for a box in file" + args[0] + ". Line was " + textLine);
-                    } else {
-                        readBoxes.add(new Box(Integer.parseInt(dimen[0]), Integer.parseInt(dimen[1]),
-                                Integer.parseInt(dimen[2]), t));
+                    try{
+                        dimen = textLine.split(" ");
+                        // Check exactily 3 dimensions were given for this box
+                        if (dimen.length == 5) {
+                            System.out.println("3 dimensions were not given for a box in file" + args[0] + ". Line was " + textLine);
+                        } 
+                        else {
+                            x = Integer.parseInt(dimen[0]);
+                            y = Integer.parseInt(dimen[1]);
+                            z = Integer.parseInt(dimen[2]);
+                            // Check that all intergers are positive
+                            if (0 < x && 0 < y && 0 < z){
+                                readBoxes.add(new Box(x, y, z, t));
+                            }
+                            else{
+                                System.out.println("A negative or zero dimension were given for a box in file" + args[0] + ". Line was " + textLine);
+                            }
+                        }
+                        // t increments to give a new id for the next box read
+                        t++;
                     }
-                    // t increments to give a new id for the next box read
-                    t++;
+                    catch(Exception ex){
+                        System.out.println("Not properly formatted line found: " + textLine);
+                    }
                 }
                 textFile.close();
 
@@ -223,12 +236,12 @@ class NPStack{
                                     break;
                                 }
                                 // Get box from first parent
-                                x = readBoxes.get(stacks[p1][i][0]);
+                                x1 = readBoxes.get(stacks[p1][i][0]);
                                 // Get box from second parent
                                 x2 = readBoxes.get(stacks[p2][i][0]);
                                 // Merge the two parents
                                 for (Box b : availBoxes) {
-                                    if(b == x){
+                                    if(b == x1){
                                         availBoxes.remove(b);
                                         // Calculate if the box can be add to stack
                                         if (stackedBoxes.isEmpty()) {
@@ -236,14 +249,14 @@ class NPStack{
                                         } else {
                                             bottomIndex = stackedBoxes.size() - 1;
                                             if (false == canFit(stackedBoxes, bottomIndex, b)) {
-                                                failedBoxes.add(b);
+                                                //failedBoxes.add(b);
                                             }
                                         }
                                         break;
                                     }
                                 }
                                 // No need to try to add the same block
-                                if (x != x2){
+                                if (x1 != x2){
                                     for (Box b : availBoxes) {
                                         if(b == x2){
                                             availBoxes.remove(b);
@@ -253,7 +266,7 @@ class NPStack{
                                             } else {
                                                 bottomIndex = stackedBoxes.size() - 1;
                                                 if (false == canFit(stackedBoxes, bottomIndex, b)) {
-                                                    failedBoxes.add(b);
+                                                    //failedBoxes.add(b);
                                                 }
                                             }
                                             break;
@@ -262,36 +275,37 @@ class NPStack{
                                 }
                             }
                         }
-                        
+
                         t = availBoxes.size();
                         // Grab random boxes from those available
                         for (int i = 0; i < t; i++) {
                             // Take a random box from available
-                            t = r.nextInt(availBoxes.size());
-                            x = availBoxes.remove(t);
+                            x1 = availBoxes.remove(r.nextInt(availBoxes.size()));
+
                             // Calculate which boxes can be add to stack
                             if (stackedBoxes.isEmpty()) {
-                                stackedBoxes.add(x);
+                                stackedBoxes.add(x1);
                             } else {
                                 bottomIndex = stackedBoxes.size() - 1;
-                                if (false == canFit(stackedBoxes, bottomIndex, x)) {
-                                    failedBoxes.add(x);
+                                if (false == canFit(stackedBoxes, bottomIndex, x1)) {
+                                    failedBoxes.add(x1);
                                 }
                             }
                         }
 
                         System.out.print("Attempt " + (g + 1) +": ");
 
-                        printStack(stackedBoxes, ", ");
+                        printStack(stackedBoxes, failedBoxes, " | ");
+                        failedBoxes.clear();
                         
                         System.out.print("This attempt's total height is ");
                         sum = 0;
                         for (int b = 0; b < stackedBoxes.size(); b++) {
-                            x =  stackedBoxes.get(b);
-                            sum += x.getCurrentHeight();
+                            x1 =  stackedBoxes.get(b);
+                            sum += x1.getCurrentHeight();
                             // Save information
-                            stacks[g][b][0] = x.getID();
-                            stacks[g][b][1] = x.getOri();
+                            stacks[g][b][0] = x1.getID();
+                            stacks[g][b][1] = x1.getOri();
                             stacks[g][b][2] = sum;
                         }
                         parentChance[g] = sum;
@@ -332,9 +346,9 @@ class NPStack{
 
                 System.out.println("Best stack at height " + stacks[GENERATIONS][bestStackSize-1][2] + " is:");
                 for(int i = 0; i < bestStackSize; i++){
-                    x = readBoxes.get(stacks[GENERATIONS][i][0]);
-                    x.setOrientation(stacks[GENERATIONS][i][1]);
-                    stackedBoxes.add(x);
+                    x1 = readBoxes.get(stacks[GENERATIONS][i][0]);
+                    x1.setOrientation(stacks[GENERATIONS][i][1]);
+                    stackedBoxes.add(x1);
                 }
                 printStack(stackedBoxes, "\n");
 

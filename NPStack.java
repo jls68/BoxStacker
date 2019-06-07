@@ -4,6 +4,9 @@ import java.util.Collections;
 import java.io.FileReader;
 import java.io.BufferedReader;
 
+//Weiyang Luo 1266415
+//James Sheaf-Morrison 1314151
+
 class NPStack {
 
     private static boolean canFit(LinkedList<Box> stackedBoxes, int bottomIndex, Box x1) {
